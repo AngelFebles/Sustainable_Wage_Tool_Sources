@@ -18,7 +18,7 @@ get_county_id <- function(county) {
 
 download_job_salary_data <- function() {
   url <- "https://download.bls.gov/pub/time.series/oe/oe.data.1.AllData"
-  #url <- "https://download.bls.gov/pub/time.series/oe/"
+  # url <- "https://download.bls.gov/pub/time.series/oe/"
   destfile <- "DataFiles/RawOutputFiles"
 
   # Create the directory if it doesn't exist
@@ -26,14 +26,14 @@ download_job_salary_data <- function() {
 
 
   # Start Selenium with a visible Chrome window
-  rdriver <- rsDriver(port= sample(7600)[1], browser=c("firefox"), chromever = NULL )
-  #Sys.sleep(10)
+  rdriver <- rsDriver(port = sample(7600)[1], browser = c("firefox"), chromever = NULL)
+  # Sys.sleep(10)
   remDr <- rdriver$client
   remDr$navigate(url)
 
- default_dir <- file.path("", "Users", Sys.info()[["user"]], "Downloads")
+  default_dir <- file.path("", "Users", Sys.info()[["user"]], "Downloads")
 
-file.rename(file.path(default_dir, "oe.data.1.AllData"), file.path(destfile, "oe.data.1.AllData"))
+  file.rename(file.path(default_dir, "oe.data.1.AllData"), file.path(destfile, "oe.data.1.AllData"))
 
 
   # Wait for the page to load (optional)

@@ -11,10 +11,8 @@ library(tidyverse)
 conflict_prefer("filter", "dplyr")
 conflict_prefer("lag", "dplyr")
 
-
+print("Getting Food Plans data....")
 food_plans_main <- function() {
-    print("Getting Food Plans data....")
-
     url <- "https://www.fns.usda.gov/cnpp/usda-food-plans-cost-food-monthly-reports"
     page <- read_html(url)
 
@@ -43,7 +41,10 @@ food_plans_main <- function() {
     # thrifty_pdf <- pdf_text("DataFiles/RawOutputFiles/thrifty_plan.pdf")
     # low_to_lib_pdf <- pdf_text("DataFiles/RawOutputFiles/low_to_lib_plan.pdf")
 
+    return(get_low_to_lib())
+}
 
+get_thirfty_plan <- function() {
     # Extract tables from the PDF file
     file1 <- "DataFiles/RawOutputFiles/thrifty_plan.pdf"
     tab <- extract_tables(file1, pages = 1)
@@ -58,13 +59,8 @@ food_plans_main <- function() {
         mutate(`Age-sex group` = gsub("and Two Children, 6-8 and 9-11 years", "", `Age-sex group`))
 
 
-
-    # df_clean <- df |> separate_longer_delim(1, delim = "\r")
-
     col1 <- str_split(df[[1]], pattern = "\r")
     col1 <- map(col1, ~ Filter(function(x) x != "", .x))
-
-    print(col1)
 
     col2 <- str_split(df[[2]], pattern = "\r")
     col2 <- map(col2, ~ Filter(function(x) x != "", .x))
@@ -79,10 +75,66 @@ food_plans_main <- function() {
     ) |>
         unnest(cols = c(col1, col2, col3))
 
-    colnames(df_clean) <- c("age_sex_group", "weekly_cost", "monthlt_cost")
+    colnames(df_clean) <- c("age_sex_group", "weekly_cost", "thrifty_monthly_cost")
+
+    # Remove weekly cost and last row
+    df_clean$weekly_cost <- NULL |>
+        head(-1)
+
+    # print(df_clean)
 
 
-    print(df_clean)
+    return(get_cohort(df_clean))
+}
+
+get_low_to_lib <- function() {
+    # Extract tables from the PDF file
+    file1 <- "DataFiles/RawOutputFiles/low_to_lib_plan.pdf"
+    tab <- extract_tables(file1, pages = 1)
+    # Convert to tibble and clean up the data (remove headers)
+    df <- as_tibble(tab[[1]]) |>
+        mutate(`...1` = gsub("Age-sex groups", NA, `...1`)) |>
+        mutate(`...1` = gsub("Individuals 3", NA, `...1`)) |>
+        mutate(`...1` = gsub("Child:", NA, `...1`)) |>
+        mutate(`...1` = gsub("Male:", NA, `...1`)) |>
+        mutate(`...1` = gsub("Female:", NA, `...1`)) |>
+        mutate(`...1` = gsub("Male and Female, 20-50 years", NA, `...1`)) |>
+        mutate(`...1` = gsub("and Two Children, 6-8 and 9-11 years", NA, `...1`))
+
+    # Delete the columns for weekly cost
+    df <- df[-c(2:4)]
+
+    # Delete empty rows
+    df <- df[-c(1:4, 10, 16), ]
+
+
+    colnames(df) <- c("age_sex_group", "low_monthly_cost", "moderate_monthly_cost", "liberal_monthly_cost")
+
+
+    # print(head(df))
+
+
+    return(df)
+}
+
+
+get_cohort <- function(df) {
+    df$cohort <- "NA"
+    for (i in seq_along(df$cohort)) {
+        if (i <= 5) {
+            df$cohort[i] <- "Child"
+        } else if (i > 5 && i <= 10) {
+            df$cohort[i] <- "Male"
+        } else {
+            df$cohort[i] <- "Female"
+        }
+    }
+
+    # print(df)
+
+    return(df)
 }
 
 food_plans_main()
+
+# print(food_plans_main())
