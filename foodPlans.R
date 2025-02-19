@@ -154,3 +154,6 @@ get_cohort <- function(df) {
 
 df <- food_plans_main()
 head(df)
+
+
+openxlsx::write.xlsx(df, "DataFiles/OutputFiles/foodplans.xlsx")

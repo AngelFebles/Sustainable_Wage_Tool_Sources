@@ -3,4 +3,5 @@ tempCodeRunnerFile.R
 
 
 backups
-DataFiles/RawOutputFiles*
+DataFiles/RawOutputFiles/*
+DataFiles/OutputFiles/*
