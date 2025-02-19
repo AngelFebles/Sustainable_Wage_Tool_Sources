@@ -41,7 +41,15 @@ food_plans_main <- function() {
     # thrifty_pdf <- pdf_text("DataFiles/RawOutputFiles/thrifty_plan.pdf")
     # low_to_lib_pdf <- pdf_text("DataFiles/RawOutputFiles/low_to_lib_plan.pdf")
 
-    return(get_low_to_lib())
+    thirty_plan <- get_thirfty_plan()
+    low_to_lib <- get_low_to_lib()
+
+    # fuse_dfs(thirty_plan, low_to_lib)
+
+    # print(thirty_plan)
+    # print(low_to_lib)
+
+    return(fuse_dfs(thirty_plan, low_to_lib))
 }
 
 get_thirfty_plan <- function() {
@@ -78,13 +86,11 @@ get_thirfty_plan <- function() {
     colnames(df_clean) <- c("age_sex_group", "weekly_cost", "thrifty_monthly_cost")
 
     # Remove weekly cost and last row
-    df_clean$weekly_cost <- NULL |>
-        head(-1)
+    df_clean$weekly_cost <- NULL
+    df_clean <- df_clean[-c(16), ]
 
     # print(df_clean)
-
-
-    return(get_cohort(df_clean))
+    return(df_clean)
 }
 
 get_low_to_lib <- function() {
@@ -107,14 +113,24 @@ get_low_to_lib <- function() {
     # Delete empty rows
     df <- df[-c(1:4, 10, 16), ]
 
-
     colnames(df) <- c("age_sex_group", "low_monthly_cost", "moderate_monthly_cost", "liberal_monthly_cost")
-
-
     # print(head(df))
-
-
     return(df)
+}
+
+fuse_dfs <- function(df1, df2) {
+    df2 <- df2[-c(1)]
+    df3 <- bind_cols(df1, df2)
+
+    age_list <- c("Infant", "Preschooler", "Preschooler", "School Age", "School Age", "School Age", "Teenager", "Adult", "Senior", "Senior", "School Age", "Teenager", "Adult", "Senior", "Senior")
+
+    df3 <- df3 |>
+        add_column(cohort = get_cohort(df3)$cohort, .after = 1) |>
+        add_column(age_group = age_list, .after = 2)
+
+    # print(df3)
+
+    return(df3)
 }
 
 
@@ -130,11 +146,11 @@ get_cohort <- function(df) {
         }
     }
 
-    # print(df)
-
     return(df)
 }
 
-food_plans_main()
 
 # print(food_plans_main())
+
+df <- food_plans_main()
+head(df)
