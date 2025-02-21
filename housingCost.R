@@ -53,4 +53,7 @@ housing_cost_main <- function(county_code) {
 
 # Racine is 5510199999
 result <- housing_cost_main("5510199999")
+
+openxlsx::write.xlsx(result, "DataFiles/OutputFiles/housing_cost.xlsx", asTable = TRUE)
+
 print(result)

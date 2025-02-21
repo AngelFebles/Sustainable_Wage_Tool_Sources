@@ -156,4 +156,4 @@ df <- food_plans_main()
 head(df)
 
 
-openxlsx::write.xlsx(df, "DataFiles/OutputFiles/foodplans.xlsx")
+openxlsx::write.xlsx(df, "DataFiles/OutputFiles/food_plans.xlsx", asTable = TRUE)
