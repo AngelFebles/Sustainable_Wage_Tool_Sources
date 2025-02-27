@@ -14,8 +14,7 @@ get_place_id <- function(county) {
   # Index 2 is the id column
   result <- df |>
     filter(area_name == county) |>
-    pull(2) |>
-    as.character()
+    pull(2)
 
   return(result)
 }
@@ -55,164 +54,116 @@ download_job_salary_data <- function() {
   head(df)
 }
 
-get_job_data_by_place <- function(place_id) {
-  # place_id <- get_place_id(place)
 
-  df <- read.delim("DataFiles/RawOutputFiles/oe.data.1.AllData", sep = "\t", header = TRUE, stringsAsFactors = FALSE)
-
-  # Decreases the time it takes to filter the table
-  setDT(df)
+get_job_data <- function(county_id) {
+  PATH <- "DataFiles/RawOutputFiles/oe.data.1.AllData"
 
 
-  county_header <- place_id
+  print("Getting job data...")
+  raw_oe <- PATH |>
+    readr::read_tsv(
+      col_types = list(
+        year = "i",
+        value = "d",
+        footnote_codes = "-",
+        .default = "c"
+      ),
+      na = "-"
+    ) |>
+    tidyr::separate_wider_position(
+      cols = "series_id",
+      widths = c(
+        survey = 2,
+        seasonal = 1,
+        area_type = 1,
+        state_code = 2,
+        area_code = 5,
+        industry_code = 6,
+        occupation_code = 6,
+        datatype_code = 2
+      )
+    )
 
-  print("Filtering the data...")
-  filtered_rows <- df[grepl(county_header, df[[1]]), ]
+  raw_oe <- raw_oe |>
+    dplyr::filter(!datatype_code %in% c(16, 17))
 
+  ## Joinning with looking table (filtering and lookup at the same time!!!!)
 
-  # Remove unneeded columns
-  filtered_rows[, c("year", "period", "footnote_codes") := NULL]
+  PLACES <- tibble::tribble(
+    ~Place, ~state_code, ~area_code,
+    "US", "00", "00000",
+    "WI", "55", "00000",
+    "County", "00", county_id
+  )
 
-  # Reshape for  1 col to 17 cols
-  df_reshaped <- data.table(matrix(filtered_rows$value, ncol = 17, byrow = TRUE))
+  racine_oe <- raw_oe |>
+    dplyr::inner_join(
+      PLACES,
+      by = c("state_code", "area_code")
+    )
 
-  # To get the job ids
-  df_reshaped2 <- data.table(matrix(filtered_rows$series_id, ncol = 17, byrow = TRUE))
-  id_col <- df_reshaped2[[1]]
+  VARIABLES <- tibble::tribble(
+    ~datatype_code, ~datatype_name,
+    "01", "Employment",
+    "02", "Employment percent relative standard error",
+    "03", "Hourly mean wage",
+    "04", "Annual mean wage",
+    "05", "Wage percent relative standard error",
+    "06", "Hourly 10th percentile wage",
+    "07", "Hourly 25th percentile wage",
+    "08", "Hourly median wage",
+    "09", "Hourly 75th percentile wage",
+    "10", "Hourly 90th percentile wage",
+    "11", "Annual 10th percentile wage",
+    "12", "Annual 25th percentile wage",
+    "13", "Annual median wage",
+    "14", "Annual 75th percentile wage",
+    "15", "Annual 90th percentile wage"
+  )
 
-  # Ids have padding at the beginning and end. This removes it
-  id_col <- substr(id_col, 18, nchar(id_col))
-  id_col <- substr(id_col, 1, nchar(id_col) - 7)
-
-
-  # df_reshaped[, "Job ID" := id_col]
-
-
-  final_df <- cbind(id_col, df_reshaped)
-
-
-  # Set column names
-  setnames(final_df, c(
-    "job_id",
-    "employment",
-    "employment_percent_relative_standard_error",
-    "hourly_mean_wage",
-    "annual_mean_wage",
-    "wage_percent_relative_standard_error",
-    "hourly_10th_percentile_wage",
-    "hourly_25th_percentile_wage",
-    "hourly_median_wage",
-    "hourly_75th_percentile_wage",
-    "hourly_90th_percentile_wage",
-    "annual_10th_percentile_wage",
-    "annual_25th_percentile_wage",
-    "annual_median_wage",
-    "annual_75th_percentile_wage",
-    "annual_90th_percentile_wage",
-    "employment_per_1000_jobs",
-    "location_quotient"
-  ))
-
-  # print(final_df)
-
-  return(final_df)
-}
-
-get_national_job_data <- function(place_id) {
-  # place_id <- get_place_id(place)
-
-  df <- read.delim("DataFiles/RawOutputFiles/oe.data.1.AllData", sep = "\t", header = TRUE, stringsAsFactors = FALSE)
-
-  # Decreases the time it takes to filter the table
-  setDT(df)
-
-  county_header <- place_id
-
-  print("Filtering the data...")
-
-  filtered_rows <- df[grepl(county_header, df[[1]]), ]
+  # dbl = double!!!
 
 
-  # Remove unneeded columns
-  filtered_rows[, c("year", "period", "footnote_codes") := NULL]
+  mean_wages_by_place <- racine_oe |>
+    dplyr::inner_join(
+      dplyr::filter(
+        VARIABLES,
+        stringr::str_ends(.data$datatype_name, "mean wage")
+      ),
+      by = "datatype_code"
+    ) |>
+    dplyr::select(
+      !"datatype_code"
+    ) |>
+    tidyr::pivot_wider(
+      names_from = "datatype_name",
+      values_from = "value"
+    )
 
-  # Reshape for  1 col to 17 cols
-  df_reshaped <- data.table(matrix(filtered_rows$value, ncol = 15, byrow = TRUE))
+  # print(mean_wages_by_place)
 
-  # To get the job ids
-  df_reshaped2 <- data.table(matrix(filtered_rows$series_id, ncol = 15, byrow = TRUE))
-  id_col <- df_reshaped2[[1]]
+  us_wages <- mean_wages_by_place |>
+    dplyr::filter(Place == "US" & industry_code == "000000") |>
+    dplyr::select(occupation_code, `Hourly mean wage`, `Annual mean wage`)
 
-  # Ids have padding at the beginning and end. This removes it
-  # id_col <- trimws(id_col)
-  # id_col <- substr(id_col, 1, nchar(id_col) - 2)
-  # id_col <- substr(id_col, 17)
+  county_wages <- mean_wages_by_place |>
+    dplyr::filter(Place == "County" & industry_code == "000000") |>
+    dplyr::select(occupation_code, `Hourly mean wage`, `Annual mean wage`)
 
-  id_col <- trimws(id_col)
-  id_col <- substr(id_col, 18, nchar(id_col) - 2)
+  wisconsin_wages <- mean_wages_by_place |>
+    dplyr::filter(Place == "WI" & industry_code == "000000") |>
+    dplyr::select(occupation_code, `Hourly mean wage`, `Annual mean wage`)
 
-  # id_col2[1:1107]
+  result <- county_wages |>
+    dplyr::inner_join(wisconsin_wages, by = "occupation_code", suffix = c("_County", "_WI")) |>
+    dplyr::inner_join(us_wages, by = "occupation_code", suffix = c("", "_US"))
 
-
-  id_col2 <- id_col[1:nrow(df_reshaped)]
-  id_col2 <- id_col[1:1105]
-  df_reshaped <- df_reshaped[1:1105, ]
-
-  # df_reshaped[, "Job ID" := id_col]
-
-
-  final_df <- cbind(id_col2, df_reshaped)
-
-
-  # Set column names
-  setnames(final_df, c(
-    "job_id",
-    "employment",
-    "employment_percent_relative_standard_error",
-    "hourly_mean_wage",
-    "annual_mean_wage",
-    "wage_percent_relative_standard_error",
-    "hourly_10th_percentile_wage",
-    "hourly_25th_percentile_wage",
-    "hourly_median_wage",
-    "hourly_75th_percentile_wage",
-    "hourly_90th_percentile_wage",
-    "annual_10th_percentile_wage",
-    "annual_25th_percentile_wage",
-    "annual_median_wage",
-    "annual_75th_percentile_wage",
-    "annual_90th_percentile_wage"
-  ))
-
-  # print(final_df)
-
-  return(final_df)
-}
-
-compare_county_and_national <- function(county_df, national_df) {
-  county_df_selected <- county_df |> select(job_id, hourly_mean_wage, annual_mean_wage)
-  national_df_selected <- national_df |> select(job_id, hourly_mean_wage, annual_mean_wage)
-
-  result <- merge(county_df_selected, national_df_selected, by = "job_id", all = FALSE)
-
-  # print(result)
-
-  setnames(result, c(
-    "job_id",
-    "county_hourly_mean_wage",
-    "county_annual_mean_wage",
-    "national_hourly_mean_wage",
-    "national_annual_mean_wage"
-  ))
-
-  # Get job titles from the job ids
-
-
-
-
+  print(result)
   return(result)
 }
 
+
+# TODO: Get the job titles from the job ids
 get_job_titles <- function(job_ids) {
   # Reads the file containing all the county codes
   df <- read.delim("DataFiles/oe.occupation", sep = "\t", header = TRUE, colClasses = "character")
@@ -225,23 +176,15 @@ get_job_titles <- function(job_ids) {
 
 
 # 0039540
-county <- "Racine, WI"
-place_id <- get_place_id(county)
+# county <- "Racine, WI"
+# place_id <- (get_place_id(county))
 
 # get_place_id(county)
-# download_job_salary_data()
 
-print("Getting job data of county...")
-county_df <- get_job_data_by_place(paste0("OEUM", place_id))
+download_job_salary_data()
 
-openxlsx::write.xlsx(county_df, "DataFiles/OutputFiles/salary_data_county.xlsx", asTable = TRUE)
+# Racine, WI
 
-print("Getting national job data ...")
-
-national_df <- get_national_job_data("OEUN0000000")
-openxlsx::write.xlsx(national_df, "DataFiles/OutputFiles/salary_data_national.xlsx", asTable = TRUE)
-
-
-print("Merging the data...")
-county_and_national <- compare_county_and_national(county_df, national_df)
-openxlsx::write.xlsx(county_and_national, "DataFiles/OutputFiles/county_and_national.xlsx", asTable = TRUE)
+place_id <- "39540"
+df <- get_job_data(place_id)
+openxlsx::write.xlsx(df, "DataFiles/OutputFiles/salary_data_comparison.xlsx", asTable = TRUE)
