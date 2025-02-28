@@ -1,150 +1,147 @@
-library(rvest)
-library(httr)
-library(pdftools)
-library(tabulapdf)
-library(dplyr)
-library(purrr)
-
-# Just importing tidyverse raises erros, conflited is used to resolve them
-library(conflicted)
-library(tidyverse)
-conflict_prefer("filter", "dplyr")
-conflict_prefer("lag", "dplyr")
-
 print("Getting Food Plans data....")
 food_plans_main <- function() {
     url <- "https://www.fns.usda.gov/cnpp/usda-food-plans-cost-food-monthly-reports"
-    page <- read_html(url)
+    page <- rvest::read_html(url)
 
     table <- page |>
-        html_node("tbody") |>
-        html_node("tr")
+        rvest::html_node("tbody") |>
+        rvest::html_node("tr")
 
     # Link to Thrifty Food Plan
     link1 <- table |>
-        html_node("a") |>
-        html_attr("href") |>
+        rvest::html_node("a") |>
+        rvest::html_attr("href") |>
         trimws()
     link_thrifty_plan <- paste0("https://www.fns.usda.gov", link1)
 
     # Link to Low to Lib Food Plan
-    link2 <- html_nodes(table, "a")[2] |>
-        html_attr("href") |>
+    link2 <- rvest::html_nodes(table, "a")[2] |>
+        rvest::html_attr("href") |>
         trimws()
     low_to_lib_plan <- paste0("https://www.fns.usda.gov", link2)
 
     # Download the PDF files
-    download.file(link_thrifty_plan, destfile = "DataFiles/RawOutputFiles/thrifty_plan.pdf", mode = "wb")
-    download.file(low_to_lib_plan, destfile = "DataFiles/RawOutputFiles/low_to_lib_plan.pdf", mode = "wb")
+    httr::GET(link_thrifty_plan, httr::write_disk("DataFiles/RawOutputFiles/thrifty_plan.pdf", overwrite = TRUE))
+    httr::GET(low_to_lib_plan, httr::write_disk("DataFiles/RawOutputFiles/low_to_lib_plan.pdf", overwrite = TRUE))
 
-    # Read the PDF files
-    # thrifty_pdf <- pdf_text("DataFiles/RawOutputFiles/thrifty_plan.pdf")
-    # low_to_lib_pdf <- pdf_text("DataFiles/RawOutputFiles/low_to_lib_plan.pdf")
-
-    thirty_plan <- get_thirfty_plan()
+    thirty_plan <- get_thirfty()
     low_to_lib <- get_low_to_lib()
+    fused_df <- get_fused_dfs(thirty_plan, low_to_lib)
 
-    # fuse_dfs(thirty_plan, low_to_lib)
-
-    # print(thirty_plan)
-    # print(low_to_lib)
-
-    return(fuse_dfs(thirty_plan, low_to_lib))
+    return(fused_df)
 }
 
-get_thirfty_plan <- function() {
-    # Extract tables from the PDF file
+get_thirfty <- function() {
     file1 <- "DataFiles/RawOutputFiles/thrifty_plan.pdf"
-    tab <- extract_tables(file1, pages = 1)
+    pdf_text <- pdftools::pdf_text(file1)
 
-    # Convert to tibble and clean up the data (remove headers)
-    df <- as_tibble(tab[[1]]) |>
-        mutate(`Age-sex group` = gsub("Individuals3\r", "", `Age-sex group`)) |>
-        mutate(`Age-sex group` = gsub("Child:\\r", "", `Age-sex group`)) |>
-        mutate(`Age-sex group` = gsub("Male:\\r", "", `Age-sex group`)) |>
-        mutate(`Age-sex group` = gsub("Female:\\r", "", `Age-sex group`)) |>
-        mutate(`Age-sex group` = gsub("Male and Female, 20-50 years\\r", "", `Age-sex group`)) |>
-        mutate(`Age-sex group` = gsub("and Two Children, 6-8 and 9-11 years", "", `Age-sex group`))
+    # Split the text into lines
+    pdf_lines <- strsplit(pdf_text, "\n")
 
+    # The PDF has a table structure that can be read line by line
+    data <- lapply(pdf_lines, function(page) {
+        page_data <- strsplit(page, "\\s+")
+        max_length <- max(sapply(page_data, length))
+        page_data <- lapply(page_data, function(row) {
+            length(row) <- max_length
+            row
+        })
+        do.call(rbind, page_data)
+    })
 
-    col1 <- str_split(df[[1]], pattern = "\r")
-    col1 <- map(col1, ~ Filter(function(x) x != "", .x))
+    # Convert to a tibble for easier manipulation
+    df <- tibble::as_tibble(do.call(rbind, data), .name_repair = "unique")
 
-    col2 <- str_split(df[[2]], pattern = "\r")
-    col2 <- map(col2, ~ Filter(function(x) x != "", .x))
+    # Extract data rows
+    df <- df[5:22, ]
 
-    col3 <- str_split(df[[3]], pattern = "\r")
-    col3 <- map(col3, ~ Filter(function(x) x != "", .x))
+    # Keep only Col for monthly costs
+    df <- df[, 5]
 
-    df_clean <- tibble(
-        col1 = col1,
-        col2 = col2,
-        col3 = col3
-    ) |>
-        unnest(cols = c(col1, col2, col3))
+    # Drop Headers
+    # df <- df[-c(6, 12), ]
 
-    colnames(df_clean) <- c("age_sex_group", "weekly_cost", "thrifty_monthly_cost")
+    # Drop NA rows
+    df <- df[complete.cases(df), ]
+    # Drop columns 1 to 4
+    # df <- df[, -c(1:4)]
 
-    # Remove weekly cost and last row
-    df_clean$weekly_cost <- NULL
-    df_clean <- df_clean[-c(16), ]
+    # print(df[5])
 
-    # print(df_clean)
-    return(df_clean)
-}
+    # Rename the first column to "Monthly_Cost"
+    colnames(df)[1] <- "Thirfty_Monthly_Cost"
 
-get_low_to_lib <- function() {
-    # Extract tables from the PDF file
-    file1 <- "DataFiles/RawOutputFiles/low_to_lib_plan.pdf"
-    tab <- extract_tables(file1, pages = 1)
-    # Convert to tibble and clean up the data (remove headers)
-    df <- as_tibble(tab[[1]]) |>
-        mutate(`...1` = gsub("Age-sex groups", NA, `...1`)) |>
-        mutate(`...1` = gsub("Individuals 3", NA, `...1`)) |>
-        mutate(`...1` = gsub("Child:", NA, `...1`)) |>
-        mutate(`...1` = gsub("Male:", NA, `...1`)) |>
-        mutate(`...1` = gsub("Female:", NA, `...1`)) |>
-        mutate(`...1` = gsub("Male and Female, 20-50 years", NA, `...1`)) |>
-        mutate(`...1` = gsub("and Two Children, 6-8 and 9-11 years", NA, `...1`))
+    # print(df)
 
-    # Delete the columns for weekly cost
-    df <- df[-c(2:4)]
-
-    # Delete empty rows
-    df <- df[-c(1:4, 10, 16), ]
-
-    colnames(df) <- c("age_sex_group", "low_monthly_cost", "moderate_monthly_cost", "liberal_monthly_cost")
-    # print(head(df))
     return(df)
 }
 
-fuse_dfs <- function(df1, df2) {
-    df2 <- df2[-c(1)]
-    df3 <- bind_cols(df1, df2)
+get_low_to_lib <- function() {
+    file1 <- "DataFiles/RawOutputFiles/low_to_lib_plan.pdf"
+    pdf_text <- pdftools::pdf_text(file1)
 
-    age_list <- c("Infant", "Preschooler", "Preschooler", "School Age", "School Age", "School Age", "Teenager", "Adult", "Senior", "Senior", "School Age", "Teenager", "Adult", "Senior", "Senior")
+    # Split the text into lines
+    pdf_lines <- strsplit(pdf_text, "\n")
 
-    df3 <- df3 |>
-        add_column(cohort = get_cohort(df3)$cohort, .after = 1) |>
-        add_column(age_group = age_list, .after = 2)
+    # The PDF has a table structure that can be read line by line
+    data <- lapply(pdf_lines, function(page) {
+        page_data <- strsplit(page, "\\s+")
+        max_length <- max(sapply(page_data, length))
+        page_data <- lapply(page_data, function(row) {
+            length(row) <- max_length
+            row
+        })
+        do.call(rbind, page_data)
+    })
 
-    # print(df3)
+    # Convert to a tibble for easier manipulation
+    df <- tibble::as_tibble(do.call(rbind, data), .name_repair = "unique")
 
-    return(df3)
+    # Extract data rows
+    df <- df[7:25, ]
+
+    # Keep only Col for monthly costs
+    df <- df[, c(5, 7, 9)]
+
+    # Drop Headers
+    # df <- df[-c(6, 12), ]
+
+    # Drop NA rows
+    df <- df[complete.cases(df), ]
+    # Drop columns 1 to 4
+    # df <- df[, -c(1:4)]
+
+    colnames(df)[1] <- "Low_Monthly_Cost"
+    colnames(df)[2] <- "Moderate_Monthly_Cost"
+    colnames(df)[3] <- "Liberal_Monthly_Cost"
+
+    return(df)
 }
 
+get_fused_dfs <- function(df1, df2) {
+    age_sex_group <- c(
+        "1 year", "2-3 years", "4-5 years", "6-8 years", "9-11 years",
+        "12-13 years", "14-18 years", "19-50 years", "51-70 years", "71+ years",
+        "12-13 years", "14-18 years", "19-50 years", "51-70 years", "71+ years"
+    )
 
-get_cohort <- function(df) {
-    df$cohort <- "NA"
-    for (i in seq_along(df$cohort)) {
-        if (i <= 5) {
-            df$cohort[i] <- "Child"
-        } else if (i > 5 && i <= 10) {
-            df$cohort[i] <- "Male"
-        } else {
-            df$cohort[i] <- "Female"
-        }
-    }
+    cohort <- c(
+        "Child", "Child", "Child", "Child", "Child",
+        "Female", "Female", "Female", "Female", "Female",
+        "Male", "Male", "Male", "Male", "Male"
+    )
+
+    age_group <- c(
+        "Infant", "Preschooler", "Preschooler", "School Age", "School Age",
+        "School Age", "Teenager", "Adult", "Senior", "Senior",
+        "School Age", "Teenager", "Adult", "Senior", "Senior"
+    )
+
+    df_base <- tibble::tibble(age_sex_group, cohort, age_group)
+
+    df <- df_base |>
+        dplyr::bind_cols(df1) |>
+        dplyr::bind_cols(df2)
 
     return(df)
 }

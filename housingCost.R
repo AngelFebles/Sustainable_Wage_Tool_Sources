@@ -1,11 +1,5 @@
-library(httr)
-library(jsonlite)
-library(dplyr)
-library(tidyr)
-
 # The file credentials.R should contain the API_KEY_HOUSING env variable
 source(("credentials.R"))
-
 
 housing_cost_main <- function(county_code) {
   # Scrapes the HUD website to retrieve
@@ -15,18 +9,18 @@ housing_cost_main <- function(county_code) {
   url <- paste0("https://www.huduser.gov/hudapi/public/fmr/data/", county_code)
 
   # Set Authorization header
-  headers <- add_headers(
+  headers <- httr::add_headers(
     # Breaks if <-
     Authorization = paste("Bearer", Sys.getenv("API_KEY_HOUSING"))
   )
 
   # Make the GET request
   print("Getting Housing Cost data....")
-  response <- GET(url, headers)
+  response <- httr::GET(url, headers)
 
   # Check if the request was successful
-  if (status_code(response) == 200) {
-    data <- fromJSON(content(response, "text", encoding = "UTF-8"))$data$basicdata # nolint: line_length_linter.
+  if (httr::status_code(response) == 200) {
+    data <- jsonlite::fromJSON(httr::content(response, "text", encoding = "UTF-8"))$data$basicdata # nolint: line_length_linter.
 
     # Create a data frame
     df <- data.frame(
@@ -40,14 +34,13 @@ housing_cost_main <- function(county_code) {
 
     # Transpose df
     df_transposed <- df |>
-      pivot_longer(cols = everything(), names_to = "Type", values_to = "Cost")
+      tidyr::pivot_longer(cols = dplyr::everything(), names_to = "Type", values_to = "Cost")
 
     print("Done!")
 
-
     return(df_transposed)
   } else {
-    print(paste("Housing Cost API request failed with status code:", status_code(response))) # nolint: line_length_linter.
+    print(paste("Housing Cost API request failed with status code:", httr::status_code(response))) # nolint: line_length_linter.
   }
 }
 

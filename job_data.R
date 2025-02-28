@@ -1,20 +1,11 @@
-library(dplyr)
-library(httr)
-library(rvest)
-library(RSelenium)
-
-# Without this is takes forever to filter table
-library(data.table)
-
-
 get_place_id <- function(county) {
   # Reads the file containing all the county codes
   df <- read.delim("DataFiles/oe.area", sep = "\t", header = TRUE, colClasses = "character")
 
   # Index 2 is the id column
   result <- df |>
-    filter(area_name == county) |>
-    pull(2)
+    dplyr::filter(area_name == county) |>
+    dplyr::pull(2)
 
   return(result)
 }
@@ -24,9 +15,8 @@ download_job_salary_data <- function() {
   url <- "https://download.bls.gov/pub/time.series/oe/"
   destfile <- "DataFiles/RawOutputFiles"
 
-
   # Start Selenium with a visible Chrome window
-  rdriver <- rsDriver(port = sample(7600)[1], browser = c("firefox"), chromever = NULL)
+  rdriver <- RSelenium::rsDriver(port = sample(7600)[1], browser = c("firefox"), chromever = NULL)
   remDr <- rdriver$client
   remDr$navigate(url)
 
@@ -43,21 +33,16 @@ download_job_salary_data <- function() {
   rdriver$server$stop()
   print("Download complete!")
 
-
   default_dir <- file.path("", "Users", Sys.info()[["user"]], "Downloads")
   file.rename(file.path(default_dir, "oe.data.1.AllData"), file.path(destfile, "oe.data.1.AllData"))
-
-
 
   df <- read.delim("DataFiles/RawOutputFiles/oe.data.1.AllData", sep = "\t", header = TRUE, stringsAsFactors = FALSE)
 
   head(df)
 }
 
-
 get_job_data <- function(county_id) {
   PATH <- "DataFiles/RawOutputFiles/oe.data.1.AllData"
-
 
   print("Getting job data...")
   raw_oe <- PATH |>
@@ -121,9 +106,6 @@ get_job_data <- function(county_id) {
     "15", "Annual 90th percentile wage"
   )
 
-  # dbl = double!!!
-
-
   mean_wages_by_place <- racine_oe |>
     dplyr::inner_join(
       dplyr::filter(
@@ -139,8 +121,6 @@ get_job_data <- function(county_id) {
       names_from = "datatype_name",
       values_from = "value"
     )
-
-  # print(mean_wages_by_place)
 
   us_wages <- mean_wages_by_place |>
     dplyr::filter(Place == "US" & industry_code == "000000") |>
@@ -162,18 +142,16 @@ get_job_data <- function(county_id) {
   return(result)
 }
 
-
 # TODO: Get the job titles from the job ids
 get_job_titles <- function(job_ids) {
   # Reads the file containing all the county codes
   df <- read.delim("DataFiles/oe.occupation", sep = "\t", header = TRUE, colClasses = "character")
   colnames(df)[1] <- "job_id"
   job_titles <- df |>
-    filter(series_id %in% job_ids) |>
-    select(series_id, job_id)
+    dplyr::filter(series_id %in% job_ids) |>
+    dplyr::select(series_id, job_id)
   return(job_titles)
 }
-
 
 # 0039540
 # county <- "Racine, WI"
