@@ -35,16 +35,17 @@ download_job_salary_data <- function() {
 
   default_dir <- file.path("", "Users", Sys.info()[["user"]], "Downloads")
   file.rename(file.path(default_dir, "oe.data.1.AllData"), file.path(destfile, "oe.data.1.AllData"))
-
+  print("Getting job data...")
   df <- read.delim("DataFiles/RawOutputFiles/oe.data.1.AllData", sep = "\t", header = TRUE, stringsAsFactors = FALSE)
 
-  head(df)
+  # head(df)
+  # return(df)
 }
 
 get_job_data <- function(county_id) {
   PATH <- "DataFiles/RawOutputFiles/oe.data.1.AllData"
 
-  print("Getting job data...")
+  print("Transforming file to dataframe...")
   raw_oe <- PATH |>
     readr::read_tsv(
       col_types = list(
@@ -68,7 +69,7 @@ get_job_data <- function(county_id) {
         datatype_code = 2
       )
     )
-
+  print("Filtering data...")
   raw_oe <- raw_oe |>
     dplyr::filter(!datatype_code %in% c(16, 17))
 
@@ -91,8 +92,8 @@ get_job_data <- function(county_id) {
     ~datatype_code, ~datatype_name,
     "01", "Employment",
     "02", "Employment percent relative standard error",
-    "03", "Hourly mean wage",
-    "04", "Annual mean wage",
+    "03", "Hourly mean",
+    "04", "Annual mean",
     "05", "Wage percent relative standard error",
     "06", "Hourly 10th percentile wage",
     "07", "Hourly 25th percentile wage",
@@ -110,7 +111,7 @@ get_job_data <- function(county_id) {
     dplyr::inner_join(
       dplyr::filter(
         VARIABLES,
-        stringr::str_ends(.data$datatype_name, "mean wage")
+        stringr::str_ends(.data$datatype_name, "mean")
       ),
       by = "datatype_code"
     ) |>
@@ -121,36 +122,56 @@ get_job_data <- function(county_id) {
       names_from = "datatype_name",
       values_from = "value"
     )
+  # Opinionated column filtering
+  pivoted <- mean_wages_by_place |>
+    dplyr::filter(
+      .data$industry_code == "000000"
+    ) |>
+    dplyr::select(
+      "occupation_code",
+      "Hourly mean",
+      "Annual mean",
+      "Place"
+    ) |>
+    tidyr::pivot_wider( # Redistributes the columns
+      names_from = "Place",
+      values_from = c("Hourly mean", "Annual mean"),
+      names_sep = " "
+    )
 
   us_wages <- mean_wages_by_place |>
     dplyr::filter(Place == "US" & industry_code == "000000") |>
-    dplyr::select(occupation_code, `Hourly mean wage`, `Annual mean wage`)
+    dplyr::select(occupation_code, `Hourly mean`, `Annual mean`)
 
   county_wages <- mean_wages_by_place |>
     dplyr::filter(Place == "County" & industry_code == "000000") |>
-    dplyr::select(occupation_code, `Hourly mean wage`, `Annual mean wage`)
+    dplyr::select(occupation_code, `Hourly mean`, `Annual mean`)
 
   wisconsin_wages <- mean_wages_by_place |>
     dplyr::filter(Place == "WI" & industry_code == "000000") |>
-    dplyr::select(occupation_code, `Hourly mean wage`, `Annual mean wage`)
+    dplyr::select(occupation_code, `Hourly mean`, `Annual mean`)
 
   result <- county_wages |>
-    dplyr::inner_join(wisconsin_wages, by = "occupation_code", suffix = c("_County", "_WI")) |>
-    dplyr::inner_join(us_wages, by = "occupation_code", suffix = c("", "_US"))
+    dplyr::inner_join(wisconsin_wages, by = "occupation_code", suffix = c(" County", " WI")) |>
+    dplyr::inner_join(us_wages, by = "occupation_code", suffix = c("", " US"))
 
-  print(result)
+  # print(result)
   return(result)
 }
 
 # TODO: Get the job titles from the job ids
-get_job_titles <- function(job_ids) {
+get_job_titles <- function(df) {
+  print("Getting job titles...")
   # Reads the file containing all the county codes
-  df <- read.delim("DataFiles/oe.occupation", sep = "\t", header = TRUE, colClasses = "character")
-  colnames(df)[1] <- "job_id"
-  job_titles <- df |>
-    dplyr::filter(series_id %in% job_ids) |>
-    dplyr::select(series_id, job_id)
-  return(job_titles)
+  result <- read.delim("DataFiles/oe.occupation", sep = "\t", header = TRUE, colClasses = "character")
+
+  # Only take the code and name cols
+  result <- result[, 1:2]
+
+  merged_data <- merge(df, result, by.x = "occupation_code", by.y = "occupation_code", all = FALSE)
+
+
+  return(merged_data)
 }
 
 # 0039540
@@ -159,10 +180,35 @@ get_job_titles <- function(job_ids) {
 
 # get_place_id(county)
 
-download_job_salary_data()
+
+get_education_requirement <- function(df) {
+  print("Getting education requirement data...")
+  ed_reqs <- readr::read_csv("DataFiles/job_reques.csv", show_col_types = FALSE) |>
+    dplyr::mutate(across(2, ~ gsub("-", "", .)))
+
+  # Only job ID and ed req
+  ed_reqs <- ed_reqs[2:3] |>
+    dplyr::rename(occupation_code = 1, education_requirement = 2)
+
+  df <- df |>
+    dplyr::inner_join(ed_reqs, by = "occupation_code")
+
+  return(df)
+}
+
+
+# download_job_salary_data()
+
 
 # Racine, WI
 
 place_id <- "39540"
 df <- get_job_data(place_id)
-openxlsx::write.xlsx(df, "DataFiles/OutputFiles/salary_data_comparison.xlsx", asTable = TRUE)
+
+df_with_ed_req <- get_education_requirement(df)
+
+# print(df_with_ed_req)
+
+df_with_titles <- get_job_titles(df_with_ed_req)
+
+openxlsx::write.xlsx(df_with_titles, "DataFiles/OutputFiles/full_job_data.xlsx", asTable = TRUE)

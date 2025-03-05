@@ -1,86 +1,114 @@
-library(rvest)
-library(httr)
-library(readxl)
-library(dplyr)
+get_sss <- function(housing_df) {
+    # Adding the titles for the food plans
+    food_plan <- c(
+        "Thrifty",
+        "Low",
+        "Moderate",
+        "Liberal"
+    )
+    # Cross join everything
+    result <- tidyr::crossing(
+        raw_sss,
+        housing_df,
+        food_plan
+    )
 
-sss_main <- function(county_self_sufficiency_standard) {
-
-# Fetches the Self Sufficiency Standard data from the designated website for Wisconsin.
-
-# The function scrapes the website to find the most recent Self Sufficiency Standard file link,
-# downloads it if not already present in the './DataFiles/' directory, and reads the file to extract data
-# specific to Racine County. The data is processed using the `read_file` function, which reads the file
-# into a data frame.
-
-# Returns:
-# @data_frame: A data frame with data specific to the County extracted from the Self Sufficiency Standard file.
-
-print("Getting Self Sufficiency Standard data....")
-
-sss_home_page <- "https://selfsufficiencystandard.org/Wisconsin/"
-r_soup <- GET(sss_home_page)
-
-# raw web data
-soup <- read_html(content(r_soup, "text"))
-
-# The table containing all Self Sufficiency Standard files
-table_soup <- soup |> html_node("div[data-id='2cc978d4']")
-
-# The first li element contains the most recent Self Sufficiency Standard file
-table_soup <- table_soup |> html_node("li")
-link_to_sss <- table_soup |> html_node("a") |> html_attr("href")
-
-# Extract the file name from the URL
-filename <- basename(link_to_sss)
-
-# Create the directory if it doesn't exist
-dir.create("src/sustainable_wage_tool_data/DataFiles", showWarnings = FALSE, recursive = TRUE)
-
-# Check if we already have that file
-file_path <- file.path("src/sustainable_wage_tool_data/DataFiles", filename)
-
-# If not, download it
-if (!file.exists(file_path)) {
-print(paste("Downloading", filename, "..."))
-response <- GET(link_to_sss)
-writeBin(content(response, "raw"), file_path)
-print("Download complete!")
-} else {
-print(paste(filename, "already downloaded."))
+    return(result)
 }
 
-return(read_file(file_path, county_self_sufficiency_standard))
+calculate_food_cost <- function(food_df, sss_df) {
+    food_plan_cost <- array(0, dim = nrow(sss_df))
+
+    # i <- 1
+
+    for (i in seq_len(nrow(sss_df))) {
+        # Check the food plan of the current row
+        row_food_plan <- sss_df$food_plan[i]
+
+        # Get the number of people in each age group
+        adults <- sss_df$`Adult(s)`[i]
+        infants <- sss_df$`Infant(s)`[i]
+        preschhoolers <- sss_df$`Preschooler(s)`[i]
+        schoolager <- sss_df$`Schoolager(s)`[i]
+        teens <- sss_df$`Teenager(s)`[i]
+
+        # Get adult cost
+        food_cost <- food_df |>
+            dplyr::filter(age_group == "Adult") |>
+            dplyr::pull(row_food_plan)
+        food_plan_cost[i] <- food_cost * adults
+
+        # Get infant cost
+        food_cost <- food_df |>
+            dplyr::filter(age_group == "Infant") |>
+            dplyr::pull(row_food_plan)
+        food_plan_cost[i] <- food_plan_cost[i] + food_cost * infants
+
+        # Get preschooler cost
+        food_cost <- food_df |>
+            dplyr::filter(age_group == "Preschooler") |>
+            dplyr::pull(row_food_plan)
+        food_plan_cost[i] <- food_plan_cost[i] + food_cost * preschhoolers
+
+        # Get schoolager cost
+        food_cost <- food_df |>
+            dplyr::filter(age_group == "School Age") |>
+            dplyr::pull(row_food_plan)
+        food_plan_cost[i] <- food_plan_cost[i] + food_cost * schoolager
+
+        # Get teenager cost
+        food_cost <- food_df |>
+            dplyr::filter(age_group == "Teenager") |>
+            dplyr::pull(row_food_plan)
+        food_plan_cost[i] <- food_plan_cost[i] + food_cost * teens
+    }
+    # print(food_plan_cost)
+
+    sss_df$food_plan_cost <- as.double(food_plan_cost)
+
+    return(sss_df)
 }
 
-read_file <- function(file_path, county_self_sufficiency_standard) {
+get_monthly_cost <- function(sss_df) {
+    # for(i in seq_len(nrow(sss_df))) {
+    sss_df$monthly_cost <- rowSums(sss_df[, c(
+        "Child Care Costs",
+        "Transportation Costs",
+        "Health Care Costs",
+        "Miscellaneous costs",
+        "Broadband & Cell Phone",
+        "Other Necessities",
+        "Taxes",
+        "Earned Income Tax Credit (-)",
+        "Child Care Tax Credit (-)",
+        "Child Tax Credit (-)",
+        "housing_cost",
+        "food_plan_cost",
+        "food_plan_cost"
+    )], na.rm = TRUE)
 
-# Reads an Excel file using readxl and extracts the Self Sufficiency Standard data.
+    sss_df$yearly_cost <- sss_df$monthly_cost * 12
 
-# Parameters:
-# file_path (str): The path to the Excel file.
+    sss_df <- sss_df[order(sss_df$yearly_cost), ]
+
+    return(sss_df)
+
+    # }
+}
+
+food_df <- readxl::read_excel("DataFiles/OutputFiles/food_plans_means.xlsx")
+housing_df <- readxl::read_excel("DataFiles/OutputFiles/housing_cost.xlsx")
+raw_sss <- readxl::read_excel("DataFiles/OutputFiles/Raw_self_suff_standard.xlsx")
 
 
-print("Reading the file...")
-# Read the Excel file using readxl
-df <- read_excel(file_path, sheet = "By Family")
 
-# Get the id of the row that contains the county, Racine by default
-county <- county_self_sufficiency_standard
+sss_with_food <- calculate_food_cost(food_df, get_sss(housing_df))
 
-county_row <- df |> filter(str_detect(.[[11]], county))
-county_index <- which(df[[11]] %in% county_row[[11]])[1]
+# openxlsx::write.xlsx(final_sss, "DataFiles/OutputFiles/self_suff_standard.xlsx", asTable = TRUE)
 
-# Theres 719 rows for each county, thats where the upperbound comes from
-data_frame <- df[county_index:(county_index + 718), ]
 
-# To make the output cleaner, I deleted the index column
-data_frame <- data_frame |> select(-1)
-
+# sss <- readxl::read_excel("DataFiles/OutputFiles/self_suff_standard.xlsx")
+# print(class(sss$food_plan_cost))
+sss_with_budget <- get_monthly_cost(sss_with_food)
+openxlsx::write.xlsx(sss_with_budget, "DataFiles/OutputFiles/self_suff_standard2.xlsx", asTable = TRUE)
 print("Done!")
-
-return(data_frame)
-}
-
-#Racine County
-
-sss_main("Racine County")

@@ -24,14 +24,14 @@ food_plans_main <- function() {
     httr::GET(link_thrifty_plan, httr::write_disk("DataFiles/RawOutputFiles/thrifty_plan.pdf", overwrite = TRUE))
     httr::GET(low_to_lib_plan, httr::write_disk("DataFiles/RawOutputFiles/low_to_lib_plan.pdf", overwrite = TRUE))
 
-    thirty_plan <- get_thirfty()
+    thirty_plan <- get_thrifty()
     low_to_lib <- get_low_to_lib()
     fused_df <- get_fused_dfs(thirty_plan, low_to_lib)
 
     return(fused_df)
 }
 
-get_thirfty <- function() {
+get_thrifty <- function() {
     file1 <- "DataFiles/RawOutputFiles/thrifty_plan.pdf"
     pdf_text <- pdftools::pdf_text(file1)
 
@@ -69,7 +69,7 @@ get_thirfty <- function() {
     # print(df[5])
 
     # Rename the first column to "Monthly_Cost"
-    colnames(df)[1] <- "Thirfty_Monthly_Cost"
+    colnames(df)[1] <- "thrifty_Monthly_Cost"
 
     # print(df)
 
@@ -143,6 +143,11 @@ get_fused_dfs <- function(df1, df2) {
         dplyr::bind_cols(df1) |>
         dplyr::bind_cols(df2)
 
+    df <- df |>
+        dplyr::mutate(
+            across(contains("Monthly_Cost"), ~ as.numeric(gsub("\\$", "", .)))
+        )
+
     return(df)
 }
 
@@ -150,7 +155,18 @@ get_fused_dfs <- function(df1, df2) {
 # print(food_plans_main())
 
 df <- food_plans_main()
-head(df)
+# head(df)
+
+df_grouped <- df |>
+    dplyr::group_by(age_group) |>
+    dplyr::summarise(
+        Thrifty = mean(thrifty_Monthly_Cost),
+        Low = mean(Low_Monthly_Cost),
+        Moderate = mean(Moderate_Monthly_Cost),
+        Liberal = mean(Liberal_Monthly_Cost)
+    )
+
+print(df_grouped)
 
 
-openxlsx::write.xlsx(df, "DataFiles/OutputFiles/food_plans.xlsx", asTable = TRUE)
+openxlsx::write.xlsx(df_grouped, "DataFiles/OutputFiles/food_plans_means.xlsx", asTable = TRUE)
