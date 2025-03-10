@@ -79,9 +79,12 @@ read_file <- function(file_path, county_self_sufficiency_standard) {
     return(df)
 }
 
+
+get_raw_self_suff_standard <- function() {
+    df <- sss_main("Racine County")
+    openxlsx::write.xlsx(df, "DataFiles/OutputFiles/Raw_self_suff_standard.xlsx", asTable = TRUE)
+    print("Raw Self Sufficiency Standard data written to Raw_self_suff_standard.xlsx")
+
+    # print(df)
+}
 # Racine County
-
-df <- sss_main("Racine County")
-openxlsx::write.xlsx(df, "DataFiles/OutputFiles/Raw_self_suff_standard.xlsx", asTable = TRUE)
-
-# print(df)

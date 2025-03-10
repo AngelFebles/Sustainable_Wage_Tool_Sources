@@ -1,4 +1,3 @@
-print("Getting Food Plans data....")
 food_plans_main <- function() {
     url <- "https://www.fns.usda.gov/cnpp/usda-food-plans-cost-food-monthly-reports"
     page <- rvest::read_html(url)
@@ -151,22 +150,24 @@ get_fused_dfs <- function(df1, df2) {
     return(df)
 }
 
+get_food_plans <- function() {
+    print("Getting Food Plans data....")
+    df <- food_plans_main()
+    # head(df)
 
-# print(food_plans_main())
+    df_grouped <- df |>
+        dplyr::group_by(age_group) |>
+        dplyr::summarise(
+            Thrifty = mean(thrifty_Monthly_Cost),
+            Low = mean(Low_Monthly_Cost),
+            Moderate = mean(Moderate_Monthly_Cost),
+            Liberal = mean(Liberal_Monthly_Cost)
+        )
 
-df <- food_plans_main()
-# head(df)
-
-df_grouped <- df |>
-    dplyr::group_by(age_group) |>
-    dplyr::summarise(
-        Thrifty = mean(thrifty_Monthly_Cost),
-        Low = mean(Low_Monthly_Cost),
-        Moderate = mean(Moderate_Monthly_Cost),
-        Liberal = mean(Liberal_Monthly_Cost)
-    )
-
-print(df_grouped)
+    # print(df_grouped)
 
 
-openxlsx::write.xlsx(df_grouped, "DataFiles/OutputFiles/food_plans_means.xlsx", asTable = TRUE)
+    openxlsx::write.xlsx(df_grouped, "DataFiles/OutputFiles/food_plans_means.xlsx", asTable = TRUE)
+
+    print("Food Plans data written to food_plans_means.xlsx")
+}

@@ -197,18 +197,25 @@ get_education_requirement <- function(df) {
 }
 
 
-# download_job_salary_data()
+get_job_data_and_ed_req <- function() {
+  print("Getting job data and education requirements...")
 
 
-# Racine, WI
+  # Racine, WI
 
-place_id <- "39540"
-df <- get_job_data(place_id)
+  place_id <- "39540"
+  df <- get_job_data(place_id)
 
-df_with_ed_req <- get_education_requirement(df)
+  df_with_ed_req <- get_education_requirement(df)
 
-# print(df_with_ed_req)
+  # print(df_with_ed_req)
 
-df_with_titles <- get_job_titles(df_with_ed_req)
+  df_with_titles <- get_job_titles(df_with_ed_req)
 
-openxlsx::write.xlsx(df_with_titles, "DataFiles/OutputFiles/full_job_data.xlsx", asTable = TRUE)
+  openxlsx::write.xlsx(df_with_titles, "DataFiles/OutputFiles/full_job_data.xlsx", asTable = TRUE)
+
+  print("Job data written to full_job_data.xlsx")
+}
+
+
+# get_job_data_and_ed_req()

@@ -1,5 +1,5 @@
 # The file credentials.R should contain the API_KEY_HOUSING env variable
-source(("credentials.R"))
+source(("src/credentials.R"))
 
 housing_cost_main <- function(county_code) {
   # Scrapes the HUD website to retrieve
@@ -36,7 +36,7 @@ housing_cost_main <- function(county_code) {
     df_transposed <- df |>
       tidyr::pivot_longer(cols = dplyr::everything(), names_to = "Type", values_to = "Cost")
 
-    print("Done!")
+    # print("Done!")
 
     return(df_transposed)
   } else {
@@ -44,12 +44,17 @@ housing_cost_main <- function(county_code) {
   }
 }
 
-# Racine is 5510199999
-result <- housing_cost_main("5510199999")
+get_housing_cost <- function() {
+  # Racine is 5510199999
+  result <- housing_cost_main("5510199999")
 
-# Rename columns
-colnames(result) <- c("housing_type", "housing_cost")
+  # Rename columns
+  colnames(result) <- c("housing_type", "housing_cost")
 
-openxlsx::write.xlsx(result, "DataFiles/OutputFiles/housing_cost.xlsx", asTable = TRUE)
+  openxlsx::write.xlsx(result, "DataFiles/OutputFiles/housing_cost.xlsx", asTable = TRUE)
 
-print(result)
+  print("House Cost data written to housing_cost.xlsx")
+  # print(result)
+}
+
+# get_housing_cost()
