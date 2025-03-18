@@ -151,12 +151,13 @@ get_job_data <- function(county_id) {
     dplyr::filter(Place == "WI" & industry_code == "000000") |>
     dplyr::select(occupation_code, `Hourly mean`, `Annual mean`)
 
-  result <- county_wages |>
+  county_wages |>
     dplyr::inner_join(wisconsin_wages, by = "occupation_code", suffix = c(" County", " WI")) |>
-    dplyr::inner_join(us_wages, by = "occupation_code", suffix = c("", " US"))
+    dplyr::inner_join(us_wages, by = "occupation_code", suffix = c("", " US")) |>
+    return() #nolint
 
   # print(result)
-  return(result)
+  # return(result)
 }
 
 # TODO: Get the job titles from the job ids

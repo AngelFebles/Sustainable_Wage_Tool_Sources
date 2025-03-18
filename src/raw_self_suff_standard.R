@@ -1,13 +1,11 @@
 sss_main <- function(county_self_sufficiency_standard) {
-    # Fetches the Self Sufficiency Standard data from the designated website for Wisconsin.
-
-    # The function scrapes the website to find the most recent Self Sufficiency Standard file link,
-    # downloads it if not already present in the './DataFiles/' directory, and reads the file to extract data
-    # specific to Racine County. The data is processed using the `read_file` function, which reads the file
-    # into a data frame.
-
-    # Returns:
-    # @data_frame: A data frame with data specific to the County extracted from the Self Sufficiency Standard file.
+    #' Fetches the Self Sufficiency Standard data from the designated website for Wisconsin.
+    #' The function scrapes the website to find the most recent Self Sufficiency Standard file link,
+    #' downloads it if not already present in the './DataFiles/' directory, and reads the file to extract data
+    #' specific to Racine County. The data is processed using the `read_file` function, which reads the file
+    #' into a data frame.
+    #' Returns:
+    #' @data_frame: A data frame with data specific to the County extracted from the Self Sufficiency Standard file.
 
     print("Getting Self Sufficiency Standard data....")
 

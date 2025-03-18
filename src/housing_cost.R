@@ -2,8 +2,8 @@
 source(("src/credentials.R"))
 
 housing_cost_main <- function(county_code) {
-  # Scrapes the HUD website to retrieve
-  # most recent housing cost data for a specified county.
+  #' Scrapes the HUD website to retrieve
+  #' most recent housing cost data for a specified county.
 
   # URL with prices for All Bedroom Sizes for the specified county
   url <- paste0("https://www.huduser.gov/hudapi/public/fmr/data/", county_code)

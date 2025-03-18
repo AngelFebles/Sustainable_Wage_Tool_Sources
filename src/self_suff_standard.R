@@ -1,13 +1,4 @@
 get_sss <- function(raw_sss, housing_df, food_df) {
-    # # Adding the titles for the food plans
-    # food_plan <- c(
-    #     "Thrifty",
-    #     "Low",
-    #     "Moderate",
-    #     "Liberal"
-    # )
-
-
     # Add housing costs to df
     df_with_housing <- tidyr::crossing(
         raw_sss,

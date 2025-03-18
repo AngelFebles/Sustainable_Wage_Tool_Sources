@@ -1,4 +1,8 @@
 food_plans_main <- function() {
+    #' Fetches the Food Plans data from the designated website
+    #' Food plans are in a table, and the uppermost row contains the most recent data
+    #' This function scrapes the website and downloads the PDF files
+
     url <- "https://www.fns.usda.gov/cnpp/usda-food-plans-cost-food-monthly-reports"
     page <- rvest::read_html(url)
 
@@ -171,3 +175,5 @@ get_food_plans <- function() {
 
     print("Food Plans data written to food_plans_means.xlsx")
 }
+
+get_food_plans()

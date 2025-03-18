@@ -5,7 +5,7 @@ get_jobs <- function(target) {
 
     full_job_data <- readxl::read_excel("DataFiles/OutputFiles/full_job_data.xlsx")
 
-    full_job_data <- full_job_data[, c("occupation_name", "Hourly mean County", "Annual mean County", "education_requirement")]
+    full_job_data <- full_job_data[, c("occupation_name", "Hourly mean County", "Annual mean County", "education_requirement")] # nolint
     # Remove rows where 'Hourly mean County' is NA
     full_job_data <- full_job_data[!is.na(full_job_data$`Hourly mean County`), ]
 
@@ -49,7 +49,7 @@ get_target_by_index <- function(index) {
 
 get_target_table_cols <- function() {
     # Family size
-    no_of_adults <- 1
+    no_of_adults <- 2
     no_of_infants <- 0
     no_of_preschoolers <- 0
     no_of_schoolagers <- 0
@@ -67,7 +67,7 @@ get_target_table_cols <- function() {
     food_plan <- "Moderate"
 
     # Options: Efficiency One_Bedroom Two_Bedroom Three_Bedroom
-    housing_plan <- "One_Bedroom"
+    housing_plan <- "Two_Bedroom"
 
     job_df <- readxl::read_excel("DataFiles/OutputFiles/self_suff_standard.xlsx")
 
