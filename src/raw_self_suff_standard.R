@@ -1,4 +1,4 @@
-sss_main <- function(county_self_sufficiency_standard) {
+sss_main <- function(county_self_sufficiency_standard, state_name) {
     #' Fetches the Self Sufficiency Standard data from the designated website for Wisconsin.
     #' The function scrapes the website to find the most recent Self Sufficiency Standard file link,
     #' downloads it if not already present in the './DataFiles/' directory, and reads the file to extract data
@@ -9,14 +9,14 @@ sss_main <- function(county_self_sufficiency_standard) {
 
     print("Getting Self Sufficiency Standard data....")
 
-    sss_home_page <- "https://selfsufficiencystandard.org/Wisconsin/"
+    sss_home_page <- sprintf("https://selfsufficiencystandard.org/%s/", state_name)
     r_soup <- httr::GET(sss_home_page)
 
     # raw web data
     soup <- rvest::read_html(httr::content(r_soup, "text"))
 
     # The table containing all Self Sufficiency Standard files
-    table_soup <- soup |> rvest::html_node("div[data-id='2cc978d4']")
+    table_soup <- soup |> rvest::html_node("div.elementor-icon-list--layout-traditional")
 
     # The first li element contains the most recent Self Sufficiency Standard file
     table_soup <- table_soup |> rvest::html_node("li")
@@ -47,6 +47,7 @@ read_file <- function(file_path, county_self_sufficiency_standard) {
     print("Reading the file...")
     # Read the Excel file using readxl
     df <- readxl::read_excel(file_path, sheet = "By Family") |>
+        dplyr::rename_with(~ gsub("\\.", " ", .)) |>
         dplyr::filter(County == county_self_sufficiency_standard) |>
         dplyr::select(-one_of( # We are gonna add our own food/housing costs so their SSS are not needed
             c(
@@ -62,11 +63,7 @@ read_file <- function(file_path, county_self_sufficiency_standard) {
     # Transform the columns 'Adults', 'Infants', 'Preschoolers', 'Schoolagers', 'Teenagers' to integers
     df <- df |>
         dplyr::mutate(
-            `Adult(s)` = as.integer(`Adult(s)`),
-            `Infant(s)` = as.integer(`Infant(s)`),
-            `Preschooler(s)` = as.integer(`Preschooler(s)`),
-            `Schoolager(s)` = as.integer(`Schoolager(s)`),
-            `Teenager(s)` = as.integer(`Teenager(s)`)
+            across(2:6, as.integer)
         )
 
     # Replace NA values with 0
@@ -78,11 +75,15 @@ read_file <- function(file_path, county_self_sufficiency_standard) {
 }
 
 
-get_raw_self_suff_standard <- function() {
-    df <- sss_main("Racine County")
+get_raw_self_suff_standard <- function(county_name, state_name) {
+    df <- sss_main(county_name, state_name)
     openxlsx::write.xlsx(df, "DataFiles/OutputFiles/Raw_self_suff_standard.xlsx", asTable = TRUE)
     print("Raw Self Sufficiency Standard data written to Raw_self_suff_standard.xlsx")
 
     # print(df)
 }
-# Racine County
+
+
+# Test Function
+# get_raw_self_suff_standard("Racine County", "Wisconsin")
+# get_raw_self_suff_standard("Lake County", "Illinois")

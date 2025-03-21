@@ -1,17 +1,20 @@
 # To print all columns
 
-get_jobs <- function(target) {
+get_jobs <- function(target, county) {
     options(dplyr.width = Inf)
+
+    county_hourly_string <- paste0("Hourly mean ", county, " County")
+    county_yearly_string <- paste0("Annual mean ", county, " County")
 
     full_job_data <- readxl::read_excel("DataFiles/OutputFiles/full_job_data.xlsx")
 
-    full_job_data <- full_job_data[, c("occupation_name", "Hourly mean County", "Annual mean County", "education_requirement")] # nolint
+    full_job_data <- full_job_data[, c("occupation_name", county_hourly_string, county_yearly_string, "education_requirement")] # nolint
     # Remove rows where 'Hourly mean County' is NA
-    full_job_data <- full_job_data[!is.na(full_job_data$`Hourly mean County`), ]
+    full_job_data <- full_job_data[!is.na(full_job_data[[county_hourly_string]]), ]
 
     # Sort the data by 'Hourly mean County'
-    x <- full_job_data[!is.na(full_job_data$`Annual mean County`), ]
-    x <- x[order(x$`Annual mean County`), ]
+    x <- full_job_data[!is.na(full_job_data[[county_yearly_string]]), ]
+    x <- x[order(x[[county_yearly_string]]), ]
 
 
 
@@ -25,8 +28,8 @@ get_jobs <- function(target) {
     # indexes1 <- seq(index, length(x$`Annual mean County`))
 
     # Only first 5 jobs
-    index <- findInterval(target, x$`Annual mean County`) + 1
-    indexes2 <- seq(index, min(index + 4, length(x$`Annual mean County`)))
+    index <- findInterval(target, x[[county_yearly_string]]) + 1
+    indexes2 <- seq(index, min(index + 4, length(x[[county_yearly_string]])))
 
     # print("Index of first job")
     # print(index)
@@ -48,6 +51,9 @@ get_target_by_index <- function(index) {
 }
 
 get_target_table_cols <- function() {
+    # Change the parameters in this funciton to filter a specific job requirement
+    # The 3 parameters are: Family Type, Housing Type, and Food Plan
+
     # Family size
     no_of_adults <- 2
     no_of_infants <- 0
@@ -63,10 +69,13 @@ get_target_table_cols <- function() {
         "t", no_of_teenagers
     )
 
-    # Options: Thrifty Low Moderate Liberal
+    # Food Plan
+    # Options: Thrifty , Low , Moderate , Liberal
     food_plan <- "Moderate"
 
-    # Options: Efficiency One_Bedroom Two_Bedroom Three_Bedroom
+
+    # Housing Type
+    # Options: Efficiency , One_Bedroom , Two_Bedroom , Three_Bedroom
     housing_plan <- "Two_Bedroom"
 
     job_df <- readxl::read_excel("DataFiles/OutputFiles/self_suff_standard.xlsx")
@@ -86,6 +95,12 @@ get_target_table_cols <- function() {
     return(target)
 }
 
-target <- get_target_table_cols()
 
-get_jobs(target)
+get_5_jobs <- function(county) {
+    target <- get_target_table_cols()
+
+    get_jobs(target, county)
+}
+
+# county <- "Stearns"
+# get_5_jobs(county)

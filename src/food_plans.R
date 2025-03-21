@@ -3,57 +3,49 @@ food_plans_main <- function() {
     #' Food plans are in a table, and the uppermost row contains the most recent data
     #' This function scrapes the website and downloads the PDF files
 
-    url <- "https://www.fns.usda.gov/cnpp/usda-food-plans-cost-food-monthly-reports"
-    page <- rvest::read_html(url)
-
-    table <- page |>
+    page <- rvest::read_html("https://www.fns.usda.gov/cnpp/usda-food-plans-cost-food-monthly-reports") |>
+        # table <- page |>
         rvest::html_node("tbody") |>
         rvest::html_node("tr")
 
     # Link to Thrifty Food Plan
-    link1 <- table |>
+    link_thrifty_plan <- page |>
         rvest::html_node("a") |>
         rvest::html_attr("href") |>
-        trimws()
-    link_thrifty_plan <- paste0("https://www.fns.usda.gov", link1)
+        trimws() |>
+        (\(url) ifelse(startsWith(url, "http"), url, paste0("https://www.fns.usda.gov", url)))()
+
 
     # Link to Low to Lib Food Plan
-    link2 <- rvest::html_nodes(table, "a")[2] |>
+    low_to_lib_plan <- rvest::html_nodes(page, "a")[2] |>
         rvest::html_attr("href") |>
-        trimws()
-    low_to_lib_plan <- paste0("https://www.fns.usda.gov", link2)
+        trimws() |>
+        (\(url) ifelse(startsWith(url, "http"), url, paste0("https://www.fns.usda.gov", url)))()
 
     # Download the PDF files
     httr::GET(link_thrifty_plan, httr::write_disk("DataFiles/RawOutputFiles/thrifty_plan.pdf", overwrite = TRUE))
     httr::GET(low_to_lib_plan, httr::write_disk("DataFiles/RawOutputFiles/low_to_lib_plan.pdf", overwrite = TRUE))
 
-    thirty_plan <- get_thrifty()
-    low_to_lib <- get_low_to_lib()
-    fused_df <- get_fused_dfs(thirty_plan, low_to_lib)
+    get_fused_dfs(get_thrifty(), get_low_to_lib())
 
-    return(fused_df)
+    # return(fused_df)
 }
 
 get_thrifty <- function() {
-    file1 <- "DataFiles/RawOutputFiles/thrifty_plan.pdf"
-    pdf_text <- pdftools::pdf_text(file1)
-
-    # Split the text into lines
-    pdf_lines <- strsplit(pdf_text, "\n")
-
-    # The PDF has a table structure that can be read line by line
-    data <- lapply(pdf_lines, function(page) {
-        page_data <- strsplit(page, "\\s+")
-        max_length <- max(sapply(page_data, length))
-        page_data <- lapply(page_data, function(row) {
-            length(row) <- max_length
-            row
+    pdf_lines <- pdftools::pdf_text("DataFiles/RawOutputFiles/thrifty_plan.pdf") |>
+        strsplit("\n") |> # Split the text into lines
+        lapply(function(page) { # The PDF has a table structure that can be read line by line
+            page_data <- strsplit(page, "\\s+")
+            max_length <- max(sapply(page_data, length))
+            page_data <- lapply(page_data, function(row) {
+                length(row) <- max_length
+                row
+            })
+            do.call(rbind, page_data)
         })
-        do.call(rbind, page_data)
-    })
 
     # Convert to a tibble for easier manipulation
-    df <- tibble::as_tibble(do.call(rbind, data), .name_repair = "unique")
+    df <- tibble::as_tibble(do.call(rbind, pdf_lines), .name_repair = "unique")
 
     # Extract data rows
     df <- df[5:22, ]
@@ -74,9 +66,9 @@ get_thrifty <- function() {
     # Rename the first column to "Monthly_Cost"
     colnames(df)[1] <- "thrifty_Monthly_Cost"
 
-    # print(df)
+    df
 
-    return(df)
+    # return(df)
 }
 
 get_low_to_lib <- function() {
@@ -176,4 +168,4 @@ get_food_plans <- function() {
     print("Food Plans data written to food_plans_means.xlsx")
 }
 
-get_food_plans()
+# get_food_plans()

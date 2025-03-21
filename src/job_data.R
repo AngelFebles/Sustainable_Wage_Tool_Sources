@@ -5,10 +5,21 @@ get_place_id <- function(county) {
   # Index 2 is the id column
   result <- df |>
     dplyr::filter(area_name == county) |>
-    dplyr::pull(2)
-
-  return(result)
+    dplyr::pull(2) |>
+    substring(3)
 }
+
+get_state_id <- function(state) {
+  # Reads the file containing all the county codes
+  df <- read.delim("DataFiles/oe.area", sep = "\t", header = TRUE, colClasses = "character")
+
+  # Index 2 is the id column
+  result <- df |>
+    dplyr::filter(area_name == state) |>
+    dplyr::pull(2) |>
+    substr(start = 1, stop = 2)
+}
+
 
 download_job_salary_data <- function() {
   # url <- "https://download.bls.gov/pub/time.series/oe/oe.data.1.AllData"
@@ -42,7 +53,7 @@ download_job_salary_data <- function() {
   # return(df)
 }
 
-get_job_data <- function(county_id) {
+get_job_data <- function(county_id, state_id, state_name, state_abreviation, county_name) {
   PATH <- "DataFiles/RawOutputFiles/oe.data.1.AllData"
 
   print("Transforming file to dataframe...")
@@ -78,7 +89,7 @@ get_job_data <- function(county_id) {
   PLACES <- tibble::tribble(
     ~Place, ~state_code, ~area_code,
     "US", "00", "00000",
-    "WI", "55", "00000",
+    state_abreviation, state_id, "00000",
     "County", "00", county_id
   )
 
@@ -147,17 +158,17 @@ get_job_data <- function(county_id) {
     dplyr::filter(Place == "County" & industry_code == "000000") |>
     dplyr::select(occupation_code, `Hourly mean`, `Annual mean`)
 
-  wisconsin_wages <- mean_wages_by_place |>
-    dplyr::filter(Place == "WI" & industry_code == "000000") |>
+  state_wages <- mean_wages_by_place |>
+    dplyr::filter(Place == state_abreviation & industry_code == "000000") |>
     dplyr::select(occupation_code, `Hourly mean`, `Annual mean`)
 
   county_wages |>
-    dplyr::inner_join(wisconsin_wages, by = "occupation_code", suffix = c(" County", " WI")) |>
-    dplyr::inner_join(us_wages, by = "occupation_code", suffix = c("", " US")) |>
-    return() #nolint
-
-  # print(result)
-  # return(result)
+    dplyr::inner_join(
+      state_wages,
+      by = "occupation_code", suffix = c(paste0(" ", county_name), paste0(" ", state_name))
+    ) |>
+    dplyr::inner_join(us_wages, by = "occupation_code", suffix = c(" ", " US")) |>
+    invisible() # nolint
 }
 
 # TODO: Get the job titles from the job ids
@@ -170,9 +181,6 @@ get_job_titles <- function(df) {
   result <- result[, 1:2]
 
   merged_data <- merge(df, result, by.x = "occupation_code", by.y = "occupation_code", all = FALSE)
-
-
-  return(merged_data)
 }
 
 # 0039540
@@ -198,14 +206,25 @@ get_education_requirement <- function(df) {
 }
 
 
-get_job_data_and_ed_req <- function() {
+get_job_data_and_ed_req <- function(county_name, state_abreviation, state_name) {
   print("Getting job data and education requirements...")
 
+  area_equivalence <- data.table::as.data.table(
+    readxl::read_excel("DataFiles/Equivalence_table.xlsx",
+      sheet = state_abreviation
+    )
+  ) |>
+    dplyr::filter(
+      .data$County == county_name
+    ) |>
+    dplyr::pull(.data$Area)
 
   # Racine, WI
+  # county <- "Racine, WI"
+  place_id <- (get_place_id(area_equivalence))
 
-  place_id <- "39540"
-  df <- get_job_data(place_id)
+  # place_id <- "39540"
+  df <- get_job_data(place_id, get_state_id(state_name), state_name, state_abreviation, county_name)
 
   df_with_ed_req <- get_education_requirement(df)
 
@@ -219,4 +238,8 @@ get_job_data_and_ed_req <- function() {
 }
 
 
-# get_job_data_and_ed_req()
+
+
+# get_job_data_and_ed_req("Racine County", "WI")
+# get_job_data_and_ed_req("Kenosha County", "WI")
+# get_job_data_and_ed_req("Lake County", "IL")

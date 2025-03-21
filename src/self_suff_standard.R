@@ -23,11 +23,11 @@ calculate_food_cost <- function(food_df, sss_df) {
         row_food_plan <- sss_df$food_plan[i]
 
         # Get the number of people in each age group
-        adults <- sss_df$`Adult(s)`[i]
-        infants <- sss_df$`Infant(s)`[i]
-        preschhoolers <- sss_df$`Preschooler(s)`[i]
-        schoolager <- sss_df$`Schoolager(s)`[i]
-        teens <- sss_df$`Teenager(s)`[i]
+        adults <- sss_df[i, 2]
+        infants <- sss_df[i, 3]
+        preschhoolers <- sss_df[i, 4]
+        schoolager <- sss_df[i, 5]
+        teens <- sss_df[i, 6]
 
         # Get adult cost
         food_cost <- food_df |>
@@ -112,10 +112,11 @@ food_cost_test <- function(sss_df, food_plans_df) {
             family_id = dplyr::row_number()
         ) |>
         tidyr::pivot_longer(
-            cols = tidyselect::all_of(c("Adult(s)", "Infant(s)", "Preschooler(s)", "Schoolager(s)", "Teenager(s)")),
+            cols = tidyselect::all_of(names(sss_df)[2:6]),
             names_to = "age_group",
             values_to = "number_of_people"
         )
+
 
     long_meal_costs_df <- food_plans_df |>
         dplyr::mutate(
@@ -127,15 +128,16 @@ food_cost_test <- function(sss_df, food_plans_df) {
             values_to = "cost_of_plan"
         )
     # print(long_meal_costs_df)
+    age_group_names <- names(sss_df)[2:6] # Get column names dynamically
 
     costs_by_family_and_plan <- long_family_sizes_df |>
-        dplyr::mutate(age_group = dplyr::recode(
-            age_group,
-            "Adult(s)" = "Adult",
-            "Infant(s)" = "Infant",
-            "Preschooler(s)" = "Preschooler",
-            "Schoolager(s)" = "School Age",
-            "Teenager(s)" = "Teenager"
+        dplyr::mutate(age_group = dplyr::case_when(
+            age_group == age_group_names[1] ~ "Adult",
+            age_group == age_group_names[2] ~ "Infant",
+            age_group == age_group_names[3] ~ "Preschooler",
+            age_group == age_group_names[4] ~ "School Age",
+            age_group == age_group_names[5] ~ "Teenager",
+            TRUE ~ age_group # Default case
         )) |>
         dplyr::inner_join(
             long_meal_costs_df,
@@ -149,6 +151,7 @@ food_cost_test <- function(sss_df, food_plans_df) {
             total_cost = sum(.data$cost_of_plan * .data$number_of_people),
             .by = c("family_id", "food_plan")
         )
+
 
     sss_df$food_plan_cost <- as.double(costs_by_family_and_plan$total_cost)
 
