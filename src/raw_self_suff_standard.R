@@ -1,18 +1,21 @@
 sss_main <- function(county_self_sufficiency_standard, state_name) {
-    #' Fetches the Self Sufficiency Standard data from the designated website for Wisconsin.
-    #' The function scrapes the website to find the most recent Self Sufficiency Standard file link,
-    #' downloads it if not already present in the './DataFiles/' directory, and reads the file to extract data
-    #' specific to Racine County. The data is processed using the `read_file` function, which reads the file
-    #' into a data frame.
-    #' Returns:
-    #' @data_frame: A data frame with data specific to the County extracted from the Self Sufficiency Standard file.
+    #' Fetches the Self Sufficiency Standard data for a specific state
+    #'
+    #' This function scrapes the Self Sufficiency Standard website to find the most recent
+    #' Self Sufficiency Standard file link for the specified state, downloads it if not already
+    #' present in the `DataFiles/RawOutputFiles` directory, and reads the file to extract data
+    #' specific to the given county.
+    #'
+    #' @param county_self_sufficiency_standard A string representing the name of the county.
+    #' @param state_name A string representing the name of the state.
+    #' @return A data frame containing data specific to the county extracted from the Self Sufficiency Standard file.
 
     print("Getting Self Sufficiency Standard data....")
 
     sss_home_page <- sprintf("https://selfsufficiencystandard.org/%s/", state_name)
     r_soup <- httr::GET(sss_home_page)
 
-    # raw web data
+    # Raw web data
     soup <- rvest::read_html(httr::content(r_soup, "text"))
 
     # The table containing all Self Sufficiency Standard files
@@ -44,6 +47,16 @@ sss_main <- function(county_self_sufficiency_standard, state_name) {
 }
 
 read_file <- function(file_path, county_self_sufficiency_standard) {
+    #' Reads and processes the Self Sufficiency Standard file
+    #'
+    #' This function reads the Self Sufficiency Standard Excel file, filters it for the specified
+    #' county, and processes the data by renaming columns, removing unnecessary columns, and
+    #' transforming specific columns to integers.
+    #'
+    #' @param file_path A string representing the path to the Self Sufficiency Standard file.
+    #' @param county_self_sufficiency_standard A string representing the name of the county.
+    #' @return A data frame containing processed data specific to the county.
+
     print("Reading the file...")
     # Read the Excel file using readxl
     df <- readxl::read_excel(file_path, sheet = "By Family") |>
@@ -74,15 +87,20 @@ read_file <- function(file_path, county_self_sufficiency_standard) {
     return(df)
 }
 
-
 get_raw_self_suff_standard <- function(county_name, state_name) {
+    #' Retrieves and writes the Self Sufficiency Standard data to an Excel file
+    #'
+    #' This function fetches the Self Sufficiency Standard data for the specified county and state,
+    #' processes it, and writes the resulting data to an Excel file.
+    #'
+    #' @param county_name A string representing the name of the county.
+    #' @param state_name A string representing the name of the state.
+    #' @return None. Writes the processed data to `Raw_self_suff_standard.xlsx`.
+
     df <- sss_main(county_name, state_name)
     openxlsx::write.xlsx(df, "DataFiles/OutputFiles/Raw_self_suff_standard.xlsx", asTable = TRUE)
     print("Raw Self Sufficiency Standard data written to Raw_self_suff_standard.xlsx")
-
-    # print(df)
 }
-
 
 # Test Function
 # get_raw_self_suff_standard("Racine County", "Wisconsin")

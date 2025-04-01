@@ -1,7 +1,10 @@
 food_plans_main <- function() {
-    #' Fetches the Food Plans data from the designated website
-    #' Food plans are in a table, and the uppermost row contains the most recent data
-    #' This function scrapes the website and downloads the PDF files
+    #' Fetches and processes the Food Plans data
+    #'
+    #' This function scrapes the USDA Food Plans website, downloads the relevant PDF files,
+    #' and processes the data to extract monthly cost information for different food plans.
+    #'
+    #' @return A fused dataframe containing processed data from the Thrifty and Low to Liberal Food Plans.
 
     page <- rvest::read_html("https://www.fns.usda.gov/cnpp/usda-food-plans-cost-food-monthly-reports") |>
         # table <- page |>
@@ -32,6 +35,13 @@ food_plans_main <- function() {
 }
 
 get_thrifty <- function() {
+    #' Processes the Thrifty Food Plan PDF
+    #'
+    #' This function extracts and processes data from the Thrifty Food Plan PDF.
+    #'
+    #' @return A tibble containing the monthly cost data for the Thrifty Food Plan.
+
+
     pdf_lines <- pdftools::pdf_text("DataFiles/RawOutputFiles/thrifty_plan.pdf") |>
         strsplit("\n") |> # Split the text into lines
         lapply(function(page) { # The PDF has a table structure that can be read line by line
@@ -53,15 +63,10 @@ get_thrifty <- function() {
     # Keep only Col for monthly costs
     df <- df[, 5]
 
-    # Drop Headers
-    # df <- df[-c(6, 12), ]
-
     # Drop NA rows
     df <- df[complete.cases(df), ]
     # Drop columns 1 to 4
-    # df <- df[, -c(1:4)]
 
-    # print(df[5])
 
     # Rename the first column to "Monthly_Cost"
     colnames(df)[1] <- "thrifty_Monthly_Cost"
@@ -72,6 +77,12 @@ get_thrifty <- function() {
 }
 
 get_low_to_lib <- function() {
+    #' Processes the Low to Liberal Food Plan PDF
+    #'
+    #' This function extracts and processes data from the Low to Liberal Food Plan PDF.
+    #'
+    #' @return A tibble containing the monthly cost data for the Low, Moderate, and Liberal Food Plans.
+
     file1 <- "DataFiles/RawOutputFiles/low_to_lib_plan.pdf"
     pdf_text <- pdftools::pdf_text(file1)
 
@@ -114,6 +125,15 @@ get_low_to_lib <- function() {
 }
 
 get_fused_dfs <- function(df1, df2) {
+    #' Combines data from the Thrifty and Low to Liberal Food Plans
+    #'
+    #' This function fuses the data from the Thrifty Food Plan and the Low to Liberal Food Plan
+    #' into a single dataframe with additional metadata.
+    #'
+    #' @param df1 A tibble containing Thrifty Food Plan data.
+    #' @param df2 A tibble containing Low to Liberal Food Plan data.
+    #' @return A tibble containing the combined data.
+
     age_sex_group <- c(
         "1 year", "2-3 years", "4-5 years", "6-8 years", "9-11 years",
         "12-13 years", "14-18 years", "19-50 years", "51-70 years", "71+ years",
@@ -134,6 +154,14 @@ get_fused_dfs <- function(df1, df2) {
 
     df_base <- tibble::tibble(age_sex_group, cohort, age_group)
 
+    # print(df_base)
+
+    # Ensure all data frames have the same number of rows
+    min_rows <- min(nrow(df_base), nrow(df1), nrow(df2))
+    df_base <- df_base[1:min_rows, ]
+    df1 <- df1[1:min_rows, ]
+    df2 <- df2[1:min_rows, ]
+
     df <- df_base |>
         dplyr::bind_cols(df1) |>
         dplyr::bind_cols(df2)
@@ -147,6 +175,13 @@ get_fused_dfs <- function(df1, df2) {
 }
 
 get_food_plans <- function() {
+    #' Generates summarized Food Plans data
+    #'
+    #' This function calculates the mean monthly costs for each food plan by age group
+    #' and writes the summarized data to an Excel file.
+    #'
+    #' @return None. Writes the summarized data to an Excel file.
+
     print("Getting Food Plans data....")
     df <- food_plans_main()
     # head(df)
@@ -168,4 +203,4 @@ get_food_plans <- function() {
     print("Food Plans data written to food_plans_means.xlsx")
 }
 
-# get_food_plans()
+get_food_plans()
