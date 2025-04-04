@@ -5,6 +5,7 @@ food_plans_main <- function() {
     #' and processes the data to extract monthly cost information for different food plans.
     #'
     #' @return A fused dataframe containing processed data from the Thrifty and Low to Liberal Food Plans.
+    #' #' @export
 
     page <- rvest::read_html("https://www.fns.usda.gov/cnpp/usda-food-plans-cost-food-monthly-reports") |>
         # table <- page |>
@@ -40,6 +41,7 @@ get_thrifty <- function() {
     #' This function extracts and processes data from the Thrifty Food Plan PDF.
     #'
     #' @return A tibble containing the monthly cost data for the Thrifty Food Plan.
+    #' @export
 
 
     pdf_lines <- pdftools::pdf_text("DataFiles/RawOutputFiles/thrifty_plan.pdf") |>
@@ -82,6 +84,7 @@ get_low_to_lib <- function() {
     #' This function extracts and processes data from the Low to Liberal Food Plan PDF.
     #'
     #' @return A tibble containing the monthly cost data for the Low, Moderate, and Liberal Food Plans.
+    #' @export
 
     file1 <- "DataFiles/RawOutputFiles/low_to_lib_plan.pdf"
     pdf_text <- pdftools::pdf_text(file1)
@@ -133,6 +136,7 @@ get_fused_dfs <- function(df1, df2) {
     #' @param df1 A tibble containing Thrifty Food Plan data.
     #' @param df2 A tibble containing Low to Liberal Food Plan data.
     #' @return A tibble containing the combined data.
+    #' @export
 
     age_sex_group <- c(
         "1 year", "2-3 years", "4-5 years", "6-8 years", "9-11 years",
@@ -181,6 +185,7 @@ get_food_plans <- function() {
     #' and writes the summarized data to an Excel file.
     #'
     #' @return None. Writes the summarized data to an Excel file.
+    #' @export
 
     print("Getting Food Plans data....")
     df <- food_plans_main()
@@ -203,4 +208,4 @@ get_food_plans <- function() {
     print("Food Plans data written to food_plans_means.xlsx")
 }
 
-get_food_plans()
+# get_food_plans()

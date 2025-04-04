@@ -1,0 +1,12 @@
+Package: SustainableWageToolSources
+Title: SustainableWageToolSources
+Version: 0.0.0.9000
+Authors@R: 
+    person("Angel", "Febles", , "angel.febles@career2cradle.org", role = c("aut", "cre"))
+Description: This repository contains scripts that automatically retrieve 
+    information from the most recent sources for the Sustainable Wage Tool.
+License: MIT + file LICENSE
+Encoding: UTF-8
+Roxygen: list(markdown = TRUE)
+RoxygenNote: 7.3.2
+URL: https://angelfebles.github.io/Sustainable_Wage_Tool_Sources/

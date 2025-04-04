@@ -8,6 +8,7 @@ get_sss <- function(raw_sss, housing_df, food_df) {
     #' @param housing_df A dataframe containing housing cost data.
     #' @param food_df A dataframe containing food cost data.
     #' @return A dataframe containing the combined self-sufficiency data with calculated costs.
+    #' @export
 
     df_with_housing <- tidyr::crossing(
         raw_sss,
@@ -30,6 +31,7 @@ calculate_food_cost <- function(food_df, sss_df) {
     #' @param food_df A dataframe containing food cost data for different age groups and plans.
     #' @param sss_df A dataframe containing self-sufficiency data for families.
     #' @return A dataframe with an additional column for the calculated food plan cost.
+    #' @export
 
     food_plan_cost <- array(0, dim = nrow(sss_df))
 
@@ -81,6 +83,7 @@ get_monthly_cost <- function(sss_df) {
     #'
     #' @param sss_df A dataframe containing self-sufficiency data with cost components.
     #' @return A dataframe with additional columns for monthly and yearly costs.
+    #' @export
 
     sss_df$monthly_cost <- rowSums(sss_df[, c(
         "Child Care Costs",
@@ -113,6 +116,7 @@ food_cost_test <- function(sss_df, food_plans_df) {
     #' @param sss_df A dataframe containing self-sufficiency data for families.
     #' @param food_plans_df A dataframe containing food cost data for different age groups and plans.
     #' @return A dataframe with an additional column for the calculated food plan cost.
+    #' @export
 
     food_plan <- c(
         "Thrifty",
@@ -178,6 +182,7 @@ get_final_self_suff_standard <- function() {
     #' calculates monthly and yearly costs, and writes the final data to an Excel file.
     #'
     #' @return None. Writes the final self-sufficiency data to `self_suff_standard.xlsx`.
+    #' @export
 
     food_df <- readxl::read_excel("DataFiles/OutputFiles/food_plans_means.xlsx")
     housing_df <- readxl::read_excel("DataFiles/OutputFiles/housing_cost.xlsx")

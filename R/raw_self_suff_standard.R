@@ -9,6 +9,7 @@ sss_main <- function(county_self_sufficiency_standard, state_name) {
     #' @param county_self_sufficiency_standard A string representing the name of the county.
     #' @param state_name A string representing the name of the state.
     #' @return A data frame containing data specific to the county extracted from the Self Sufficiency Standard file.
+    #' @export
 
     print("Getting Self Sufficiency Standard data....")
 
@@ -56,6 +57,7 @@ read_file <- function(file_path, county_self_sufficiency_standard) {
     #' @param file_path A string representing the path to the Self Sufficiency Standard file.
     #' @param county_self_sufficiency_standard A string representing the name of the county.
     #' @return A data frame containing processed data specific to the county.
+    #' @export
 
     print("Reading the file...")
     # Read the Excel file using readxl
@@ -96,6 +98,7 @@ get_raw_self_suff_standard <- function(county_name, state_name) {
     #' @param county_name A string representing the name of the county.
     #' @param state_name A string representing the name of the state.
     #' @return None. Writes the processed data to `Raw_self_suff_standard.xlsx`.
+    #' @export
 
     df <- sss_main(county_name, state_name)
     openxlsx::write.xlsx(df, "DataFiles/OutputFiles/Raw_self_suff_standard.xlsx", asTable = TRUE)

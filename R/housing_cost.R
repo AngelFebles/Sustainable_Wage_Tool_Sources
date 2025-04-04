@@ -1,5 +1,6 @@
 # The file credentials.R should contain the API_KEY_HOUSING env variable
-source(("src/credentials.R"))
+# source(("R/credentials.R"))
+source(("DataFiles/credentials.R"))
 
 housing_cost_main <- function(county_code) {
   #' Retrieves housing cost data for a specified county
@@ -10,6 +11,7 @@ housing_cost_main <- function(county_code) {
   #' @param county_code A string representing the FIPS code of the county.
   #' @return A tibble containing housing cost data for different housing types (e.g., Efficiency, One-Bedroom).
   #'         Returns `NULL` if the API request fails.
+  #' @export
 
   # URL with prices for All Bedroom Sizes for the specified county
   url <- paste0("https://www.huduser.gov/hudapi/public/fmr/data/", county_code)
@@ -68,6 +70,7 @@ get_housing_cost <- function(fips_code) {
   #'
   #' @param fips_code A string representing the FIPS code of the county.
   #' @return None. Writes the housing cost data to an Excel file named `housing_cost.xlsx`.
+  #' @export
 
   result <- housing_cost_main(fips_code)
 
