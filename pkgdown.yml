@@ -2,7 +2,7 @@ pandoc: 3.6.4
 pkgdown: 2.1.1
 pkgdown_sha: ~
 articles: {}
-last_built: 2025-04-07T19:28Z
+last_built: 2025-04-07T17:22Z
 urls:
   reference: https://angelfebles.github.io/Sustainable_Wage_Tool_Sources/reference
   article: https://angelfebles.github.io/Sustainable_Wage_Tool_Sources/articles
