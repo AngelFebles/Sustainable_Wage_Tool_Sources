@@ -39,25 +39,25 @@ state_abreviation <- readxl::read_xls("DataFiles/US_State_Abbreviations.xls") |>
 compound_county_name <- paste0(county, ", ", state_abreviation)
 
 # Step 1: Retrieve job data and education requirements
-source("src/job_data.R")
+source("R/job_data.R")
 get_job_data_and_ed_req(paste(county, "County"), state_abreviation, state)
 
 # Step 2: Process food plans
-source("src/food_plans.R")
+source("R/food_plans.R")
 get_food_plans()
 
 # Step 3: Retrieve housing cost data
-source("src/housing_cost.R")
+source("R/housing_cost.R")
 get_housing_cost(fips_code)
 
 # Step 4: Fetch and process the Self Sufficiency Standard data
-source("src/raw_self_suff_standard.R")
+source("R/raw_self_suff_standard.R")
 get_raw_self_suff_standard(paste(county, "County"), state)
 
 # Step 5: Combine all data to calculate final self-sufficiency costs
-source("src/self_suff_standard.R")
+source("R/self_suff_standard.R")
 get_final_self_suff_standard()
 
 # Optional: Retrieve the top 5 jobs based on target salary
-# source("src/binary_search.R")
+# source("R/binary_search.R")
 # get_5_jobs(county)

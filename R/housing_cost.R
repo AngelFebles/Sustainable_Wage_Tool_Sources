@@ -1,5 +1,5 @@
 # The file credentials.R should contain the API_KEY_HOUSING env variable
-source(("src/credentials.R"))
+source(("R/credentials.R"))
 
 housing_cost_main <- function(county_code) {
   #' Retrieves housing cost data for a specified county

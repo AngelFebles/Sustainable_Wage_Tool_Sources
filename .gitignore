@@ -1,6 +1,6 @@
 credentials.r
 tempCodeRunnerFile.*
-
+.Rproj.user
 
 backups
 DataFiles/RawOutputFiles/*
@@ -9,3 +9,4 @@ DataFiles/OutputFiles/*
 a.r
 scrape_equivalence_table.py
 launch.json
+docs
