@@ -6,6 +6,7 @@ get_place_id <- function(county) {
   #'
   #' @param county A string representing the name of the county.
   #' @return A string representing the place ID for the county.
+  #' @export
 
   df <- read.delim("DataFiles/oe.area", sep = "\t", header = TRUE, colClasses = "character")
   result <- df |>
@@ -22,6 +23,7 @@ get_state_id <- function(state) {
   #'
   #' @param state A string representing the name of the state.
   #' @return A string representing the state ID for the state.
+  #' @export
 
   df <- read.delim("DataFiles/oe.area", sep = "\t", header = TRUE, colClasses = "character")
   result <- df |>
@@ -37,6 +39,7 @@ download_job_salary_data <- function() {
   #' job salary data file. The file is then moved to the specified directory.
   #'
   #' @return None. Downloads the file and moves it to the `DataFiles/RawOutputFiles` directory.
+  #' @export
 
   url <- "https://download.bls.gov/pub/time.series/oe/"
   destfile <- "DataFiles/RawOutputFiles"
@@ -72,6 +75,7 @@ get_job_data <- function(county_id, state_id, state_name, state_abreviation, cou
   #' @param state_abreviation A string representing the state abbreviation.
   #' @param county_name A string representing the name of the county.
   #' @return A tibble containing processed job salary data.
+  #' @export
 
   PATH <- "DataFiles/RawOutputFiles/oe.data.1.AllData"
 
@@ -181,6 +185,7 @@ get_job_titles <- function(df) {
   #'
   #' @param df A dataframe containing job data.
   #' @return A dataframe with job titles added.
+  #' @export
 
   print("Getting job titles...")
   result <- read.delim("DataFiles/oe.occupation", sep = "\t", header = TRUE, colClasses = "character")
@@ -196,6 +201,7 @@ get_education_requirement <- function(df) {
   #'
   #' @param df A dataframe containing job data.
   #' @return A dataframe with education requirements added.
+  #' @export
 
   print("Getting education requirement data...")
   ed_reqs <- readr::read_csv("DataFiles/job_reques.csv", show_col_types = FALSE) |>
@@ -220,6 +226,7 @@ get_job_data_and_ed_req <- function(county_name, state_abreviation, state_name) 
   #' @param state_abreviation A string representing the state abbreviation.
   #' @param state_name A string representing the name of the state.
   #' @return None. Writes the data to an Excel file.
+  #' @export
 
   print("Getting job data and education requirements...")
 
@@ -245,3 +252,4 @@ get_job_data_and_ed_req <- function(county_name, state_abreviation, state_name) 
 # get_job_data_and_ed_req("Racine County", "WI")
 # get_job_data_and_ed_req("Kenosha County", "WI")
 # get_job_data_and_ed_req("Lake County", "IL")
+# get_job_data_and_ed_req("Racine", "WI", "Wisconsin")
